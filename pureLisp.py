@@ -4,7 +4,7 @@
 
 # Extensions:
 # - macros
-# - numbers
+# - numbers (floats)
 # - comparison operators
 
 def debug(*args,**kwargs):
@@ -13,7 +13,7 @@ def debug(*args,**kwargs):
 
 import re
 
-NIL = None
+NIL = []
 SYM_T = "T"
 
 # --------------------------------------------
@@ -55,9 +55,9 @@ def atom(token):
     if token == "T":
         return SYM_T
 
-    # Try integer
+    # Try float
     try:
-        return int(token)
+        return float(token)
     except ValueError:
         pass
 
@@ -123,6 +123,8 @@ def env_extend(params, args, env):
 # --------------------------------------------
 
 def is_atom(x):
+    if x == NIL:
+        return True
     return not isinstance(x, list)
 
 def is_eq(x, y):
@@ -139,7 +141,7 @@ def lisp_eval(expr, env):
             return NIL
         if expr == SYM_T:
             return SYM_T
-        if isinstance(expr, int):
+        if isinstance(expr, float):
             return expr
         ret, found = env_lookup(expr, env)
         if found:
@@ -288,13 +290,25 @@ def apply_primitive(name, args):
         for a in args:
             out *= a
         return out
-    
+
     if name == "/":
+        out = args[0]
+        for a in args[1:]:
+            out /= a
+        return out
+
+    if name == "//":
         out = args[0]
         for a in args[1:]:
             out //= a   # integer division
         return out
-        
+
+    if name == "%":
+        out = args[0]
+        for a in args[1:]:
+            out %= a
+        return out
+
     if name == "<":
         return SYM_T if args[0] < args[1] else NIL
     
@@ -326,6 +340,9 @@ STANDARD_LIBRARY = [
 
     # list
     "(define list (lambda (a b) (cons a (cons b NIL))))",
+
+    # null
+    "(define null (lambda (x) (eq x NIL)))",
 
     # append
     """
