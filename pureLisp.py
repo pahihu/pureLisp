@@ -329,22 +329,22 @@ def apply_primitive(name, args):
 # --------------------------------------------
 
 STANDARD_LIBRARY = [
-    # not
+    # (not x)
     "(define not (lambda (x) (cond (x NIL) (T T))))",
 
-    # and
+    # (and x y)
     "(define and (lambda (x y) (cond (x y) (T NIL))))",
 
-    # or
+    # (or x y)
     "(define or (lambda (x y) (cond (x T) (T y))))",
 
-    # list
+    # (list x y)
     "(define list (lambda (a b) (cons a (cons b NIL))))",
 
-    # null
+    # (null x)
     "(define null (lambda (x) (eq x NIL)))",
 
-    # append
+    # (append L1 L2)
     """
     (define append
       (label append
@@ -354,7 +354,7 @@ STANDARD_LIBRARY = [
             (T (cons (car x) (append (cdr x) y)))))))
     """,
 
-    # map
+    # (map fn L)
     """
     (define map
       (label map
@@ -364,7 +364,7 @@ STANDARD_LIBRARY = [
             (T (cons (f (car xs)) (map f (cdr xs))))))))
     """,
 
-    # length
+    # (length L)
     """
     (define length
       (label length
@@ -374,7 +374,7 @@ STANDARD_LIBRARY = [
             (T (+ 1 (length (cdr xs))))))))
     """,
 
-    # reverse
+    # (reverse L)
     """
     (define reverse
       (label reverse
@@ -384,7 +384,7 @@ STANDARD_LIBRARY = [
             (T (append (reverse (cdr xs)) (cons (car xs) NIL)))))))
     """,
 
-    # fold (reduce)
+    # (fold fn i L)
     """
     (define fold
       (label fold
@@ -392,6 +392,25 @@ STANDARD_LIBRARY = [
           (cond
             ((atom xs) init)
             (T (fold f (f init (car xs)) (cdr xs)))))))
+    """,
+    # (pair K V) => ((k1 v1)...)
+    """
+    (define pair
+      (lambda (x y)
+        (cond
+          ((and (atom x) (atom y)) NIL)
+          ((and (not (atom x)) (not (atom y)))
+            (cons (list (car x) (car y))
+                  (pair (cdr x) (cdr y)))))))
+    """,
+    # (assoc k L)
+    """
+    (define assoc
+      (lambda (x y)
+        (cond
+          ((atom y) NIL)
+          ((eq (car (car y)) x) (car (cdr (car y))))
+          (T (assoc x (cdr y))))))
     """
 ]
 
