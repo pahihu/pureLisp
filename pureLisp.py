@@ -347,6 +347,9 @@ def apply_primitive(name, args, env):
     if name == ">=":
         return SYM_T if args[0] >= args[1] else NIL
 
+    if name == "float?":
+        return SYM_T if isinstance(args[0], float) else NIL
+
     if name == "number?":
         return SYM_T if isinstance(args[0], int) or isinstance(args[0], float) else NIL
 
@@ -357,6 +360,14 @@ def apply_primitive(name, args, env):
         if isinstance(x, int):
             return x
         raise TypeError("int expects a number")
+
+    if name == "float":
+        x = args[0]
+        if isinstance(x, int):
+            return float(x)
+        if isinstance(x, float):
+            return x
+        raise TypeError("float expects a number")
 
     if name == "load":
         fname = args[0]
