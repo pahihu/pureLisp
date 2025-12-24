@@ -347,11 +347,6 @@ def apply_primitive(name, args, env):
 
 def repl():
     env = []
-    # Load standard library
-    for form in STANDARD_LIBRARY:
-        debug(f'form={form}')
-        lisp_eval(read(form), env)
-
     print("Pure Lisp REPL - Ctrl+C to exit")
     while True:
         try:
