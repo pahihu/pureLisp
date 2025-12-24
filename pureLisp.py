@@ -6,6 +6,7 @@ def debug(*args,**kwargs):
     if False:
         print(*args,**kwargs)
 
+import math
 import re
 
 NIL = []
@@ -318,6 +319,13 @@ def apply_primitive(name, args, env):
         for a in args[1:]:
             out %= a
         return out
+
+    if name == "log":
+        return math.log(args[0])
+
+    if name == "expt":
+        base, exp = args
+        return base ** exp
 
     if name == "<":
         return SYM_T if args[0] < args[1] else NIL

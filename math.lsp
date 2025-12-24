@@ -1,10 +1,10 @@
-(define square
-  (lambda (x)
-    (* x x)))
+(define square (lambda (x) (* x x)))
 
-(define cube
-  (lambda (x)
-    (* x x x)))
+(define cube (lambda (x) (* x x x)))
+
+(define log2 (lambda (x) (/ (log x) (log 2))))
+
+(define log10 (lambda (x) (/ (log x) (log 10))))
 
 ; continued fraction, (cfract 1 n)
 (define cfract
