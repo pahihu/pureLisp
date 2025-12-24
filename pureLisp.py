@@ -53,6 +53,12 @@ def atom(token):
     if token == "T":
         return SYM_T
 
+    # Try integer
+    try:
+        return int(token)
+    except ValueError:
+        pass
+
     # Try float
     try:
         return float(token)
@@ -152,6 +158,8 @@ def lisp_eval(expr, env):
             return NIL
         if expr == SYM_T:
             return SYM_T
+        if isinstance(expr, int):
+            return expr
         if isinstance(expr, float):
             return expr
         ret, found = env_lookup(expr, env)
@@ -335,9 +343,20 @@ def apply_primitive(name, args, env):
     
     if name == "<=":
         return SYM_T if args[0] <= args[1] else NIL
-    
+
     if name == ">=":
         return SYM_T if args[0] >= args[1] else NIL
+
+    if name == "number?":
+        return SYM_T if isinstance(args[0], int) or isinstance(args[0], float) else NIL
+
+    if name == "int":
+        x = args[0]
+        if isinstance(x, float):
+            return int(x)
+        if isinstance(x, int):
+            return x
+        raise TypeError("int expects a number")
 
     if name == "load":
         fname = args[0]
