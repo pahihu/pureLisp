@@ -13,17 +13,24 @@
 
 
 ; macros
-(defmacro when (lambda (args) (list (quote cond) (list (car args) (car (cdr args))))))
+(defmacro when
+  (lambda (args)
+    (list (quote cond) (list (car args) (car (cdr args))))))
           
 (when (T (quote ok)))
 
 ; FAIL
-(defmacro infix (lambda (args) (list (car (cdr args)) (car args) (car (cdr (cdr args))))))
+(defmacro infix
+  (lambda (args)
+    (list (car (cdr args)) (car args) (car (cdr (cdr args))))))
           
 (infix (a + b))
 
+
 ; FAIL
-(defmacro fn (lambda (args) (list (quote lambda) (car args) (car (cdr args)))))
+(defmacro fn
+  (lambda (args)
+    (list (quote lambda) (car args) (car (cdr args)))))
           
 ((fn ((x) (cons x x))) (quote z))
 

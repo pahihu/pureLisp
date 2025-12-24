@@ -2,11 +2,6 @@
 # Pure Lisp with REPL and standard library
 # ============================================
 
-# Extensions:
-# - macros
-# - numbers (floats)
-# - comparison operators
-
 def debug(*args,**kwargs):
     if False:
         print(*args,**kwargs)
@@ -21,7 +16,9 @@ SYM_T = "T"
 # --------------------------------------------
 
 def tokenize(src):
-    spaced = re.sub(r"('|`|,@|,|\(|\))", r" \1 ", src)
+    # Remove everything from ';' to end of line
+    src_no_comments = re.sub(r";[^\n]*", "", src)
+    spaced = re.sub(r"('|`|,@|,|\(|\))", r" \1 ", src_no_comments)
     return spaced.split()
 
 def read_from_tokens(tokens):
@@ -70,6 +67,19 @@ def read(src):
     if tokens:
         raise SyntaxError("Extra tokens after expression")
     return expr
+
+# --------------------------------------------
+# File loader
+# --------------------------------------------
+def lisp_load(filename, env):
+    with open(filename, "r") as f:
+        src = f.read()
+    # Allow multiple top-level forms
+    tokens = tokenize(src)
+    while tokens:
+        expr = read_from_tokens(tokens)
+        lisp_eval(expr, env)
+
 
 # --------------------------------------------
 # Quasiquote expander
@@ -223,7 +233,7 @@ def lisp_eval(expr, env):
 
 def lisp_apply(fn, arg_vals, env):
     if isinstance(fn, str):
-        return apply_primitive(fn, arg_vals)
+        return apply_primitive(fn, arg_vals, env)
 
     # Macro application
     if isinstance(fn, tuple) and fn[0] == "MACRO":
@@ -251,7 +261,7 @@ def lisp_apply(fn, arg_vals, env):
 # Primitive functions
 # --------------------------------------------
 
-def apply_primitive(name, args):
+def apply_primitive(name, args, env):
     if name == "atom":
         return SYM_T if is_atom(args[0]) else NIL
 
@@ -321,98 +331,14 @@ def apply_primitive(name, args):
     if name == ">=":
         return SYM_T if args[0] >= args[1] else NIL
 
+    if name == "load":
+        fname = args[0]
+        if not isinstance(fname, str):
+            raise TypeError("load expects a filename string")
+        lisp_load(fname, env)
+        return fname
+
     raise NameError(f"Unknown primitive: {name}")
-
-
-# --------------------------------------------
-# Standard Library (in pure Lisp)
-# --------------------------------------------
-
-STANDARD_LIBRARY = [
-    # (not x)
-    "(define not (lambda (x) (cond (x NIL) (T T))))",
-
-    # (and x y)
-    "(define and (lambda (x y) (cond (x y) (T NIL))))",
-
-    # (or x y)
-    "(define or (lambda (x y) (cond (x T) (T y))))",
-
-    # (list x y)
-    "(define list (lambda (a b) (cons a (cons b NIL))))",
-
-    # (null x)
-    "(define null (lambda (x) (eq x NIL)))",
-
-    # (append L1 L2)
-    """
-    (define append
-      (label append
-        (lambda (x y)
-          (cond
-            ((atom x) y)
-            (T (cons (car x) (append (cdr x) y)))))))
-    """,
-
-    # (map fn L)
-    """
-    (define map
-      (label map
-        (lambda (f xs)
-          (cond
-            ((atom xs) NIL)
-            (T (cons (f (car xs)) (map f (cdr xs))))))))
-    """,
-
-    # (length L)
-    """
-    (define length
-      (label length
-        (lambda (xs)
-          (cond
-            ((atom xs) 0)
-            (T (+ 1 (length (cdr xs))))))))
-    """,
-
-    # (reverse L)
-    """
-    (define reverse
-      (label reverse
-        (lambda (xs)
-          (cond
-            ((atom xs) NIL)
-            (T (append (reverse (cdr xs)) (cons (car xs) NIL)))))))
-    """,
-
-    # (fold fn i L)
-    """
-    (define fold
-      (label fold
-        (lambda (f init xs)
-          (cond
-            ((atom xs) init)
-            (T (fold f (f init (car xs)) (cdr xs)))))))
-    """,
-    # (pair K V) => ((k1 v1)...)
-    """
-    (define pair
-      (lambda (x y)
-        (cond
-          ((and (atom x) (atom y)) NIL)
-          ((and (not (atom x)) (not (atom y)))
-            (cons (list (car x) (car y))
-                  (pair (cdr x) (cdr y)))))))
-    """,
-    # (assoc k L)
-    """
-    (define assoc
-      (lambda (x y)
-        (cond
-          ((atom y) NIL)
-          ((eq (car (car y)) x) (car (cdr (car y))))
-          (T (assoc x (cdr y))))))
-    """
-]
 
 
 # --------------------------------------------

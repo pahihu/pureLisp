@@ -1,0 +1,30 @@
+(define square
+  (lambda (x)
+    (* x x)))
+
+(define cube
+  (lambda (x)
+    (* x x x)))
+
+; continued fraction, (cfract 1 n)
+(define cfract
+  (lambda (x y)
+    (cond
+      ((< x y) (/ x (+ 1 (cfract (+ x 1) y))))
+      (T y))))
+
+
+; factorial
+(define fact
+  (lambda (x)
+    (cond
+      ((eq 0 x) 1)
+      (T (* x (fact (- x 1)))))))
+
+
+; Fibonacci
+(define fib
+  (lambda (x)
+    (cond
+      ((< x 2) x)
+      (T (+ (fib (- x 1)) (fib (- x 2)))))))
