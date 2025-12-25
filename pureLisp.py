@@ -12,6 +12,7 @@ import re
 NIL = []
 SYM_T = "T"
 
+
 # --------------------------------------------
 # Reader
 # --------------------------------------------
@@ -75,9 +76,11 @@ def read(src):
         raise SyntaxError("Extra tokens after expression")
     return expr
 
+
 # --------------------------------------------
 # File loader
 # --------------------------------------------
+
 def lisp_load(filename, env):
     with open(filename, "r") as f:
         src = f.read()
@@ -91,6 +94,7 @@ def lisp_load(filename, env):
 # --------------------------------------------
 # Quasiquote expander
 # --------------------------------------------
+
 def qq_expand(expr):
     # Atom > literal
     if is_atom(expr):
@@ -153,21 +157,13 @@ def is_eq(x, y):
 # --------------------------------------------
 
 def lisp_eval(expr, env):
+    debug(f'eval: {expr}')
     if is_atom(expr):
-        if expr is NIL:
-            return NIL
-        if expr == SYM_T:
-            return SYM_T
-        if isinstance(expr, int):
-            return expr
-        if isinstance(expr, float):
-            return expr
-        ret, found = env_lookup(expr, env)
-        if found:
-            return ret
-        elif isinstance(expr, str):
-            # possible primitive function
-            return expr
+        if isinstance(expr, str):
+            ret, found = env_lookup(expr, env)
+            # not found, possible primitive function
+            return ret if found else expr
+        return expr
 
     if not expr:
         return NIL
@@ -241,27 +237,30 @@ def lisp_eval(expr, env):
 # --------------------------------------------
 
 def lisp_apply(fn, arg_vals, env):
+    debug(f'apply: fn={fn} arg_vals={arg_vals}')
     if isinstance(fn, str):
         return apply_primitive(fn, arg_vals, env)
 
-    # Macro application
-    if isinstance(fn, tuple) and fn[0] == "MACRO":
-        _, params, body, closure_env = fn
-        # Macro receives *raw* (unevaluated) argument expressions
-        new_env = env_extend(params, arg_vals, closure_env)
-        expanded = lisp_eval(body, new_env)
-        # Now evaluate the expanded code in the *current* environment
-        return lisp_eval(expanded, env)
-
-    if isinstance(fn, tuple) and fn[0] == "LAMBDA":
-        _, params, body, closure_env = fn
-        new_env = env_extend(params, arg_vals, closure_env)
-        return lisp_eval(body, new_env)
-
-    if isinstance(fn, tuple) and fn[0] == "LABEL":
-        _, name, inner_fn = fn
-        labeled_env = [(name, fn)] + env
-        return lisp_apply(inner_fn, arg_vals, labeled_env)
+    if isinstance(fn, tuple):
+        match fn[0]:
+            case "MACRO": # Macro application
+                _, params, body, closure_env = fn
+                # Macro receives *raw* (unevaluated) argument expressions
+                new_env = env_extend(params, [arg_vals], closure_env)
+                expanded = lisp_eval(body, new_env)
+                debug(f'expanded={expanded}')
+                # Now evaluate the expanded code in the *current* environment
+                return lisp_eval(expanded, env)
+            case "LAMBDA":
+                _, params, body, closure_env = fn
+                new_env = env_extend(params, arg_vals, closure_env)
+                return lisp_eval(body, new_env)
+            case "LABEL":
+                _, name, inner_fn = fn
+                labeled_env = [(name, fn)] + env
+                return lisp_apply(inner_fn, arg_vals, labeled_env)
+            case _:
+                raise TypeError(f"Unknown special form: {fn}")
 
     raise TypeError(f"Cannot apply non-function: {fn}")
 
