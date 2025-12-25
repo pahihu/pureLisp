@@ -94,38 +94,35 @@
                 (T (cons head tail))))
             (T (cons head tail))))))))
 
-; combine like terms
+; combiner
+(define combiner
+  (lambda (op xs f)
+    (let ((args (cdr xs)))
+      (let ((x (combine-terms (car args)))
+            (rest (map combine-terms (cdr args))))
+        (cond
+          ((atom rest) (cons op (cons x rest)))
+          ; (op a a...)
+          ((equal x (car rest))
+            `(,op ,(f x) ,@(cdr rest)))
+          ; (op (op...) ...)
+          ((and (not (atom x)) (eq (car x) op))
+            `(,op ,@(cdr x) ,@rest))
+          ; (op a (op...) ...))
+          ((and (not (atom (car rest))) (eq (car (car rest)) op))
+            `(,op ,x ,@(cdr (car rest)) ,@(cdr rest)))
+          (T (cons op (cons x rest))))))))
+
 (define combine-terms
   (lambda (xs)
     (cond
       ((atom xs) xs)
       ((eq (car xs) (quote *))
-        (let ((args (cdr xs)))
-          (let ((x (combine-terms (car args)))
-                (rest (map combine-terms (cdr args))))
-            (cond
-              ((atom rest) (cons '* (cons x rest)))
-              ((equal x (car rest))
-                `(* (expt ,x 2) ,@(cdr rest)))
-              ((and (not (atom x)) (eq (car x) (quote *)))
-                `(* ,@(cdr x) ,@rest))
-              ((and (not (atom (car rest))) (eq (car (car rest)) (quote *)))
-                `(* ,x ,@(cdr (car rest)) ,@(cdr rest)))
-              (T (cons '* (cons x rest)))))))
+        (combiner '* xs (lambda (x) `(expt ,x 2))))
       ((eq (car xs) (quote +))
-        (let ((args (cdr xs)))
-          (let ((x (combine-terms (car args)))
-                (rest (map combine-terms (cdr args))))
-            (cond
-              ((atom rest) (cons '+ (cons x rest)))
-              ((equal x (car rest))
-                `(+ (* ,x 2) ,@(cdr rest)))
-              ((and (not (atom x)) (eq (car x) (quote +)))
-                `(+ ,@(cdr x) ,@rest))
-              ((and (not (atom (car rest))) (eq (car (car rest)) (quote +)))
-                `(+ ,x ,@(cdr (car rest)) ,@(cdr rest)))
-              (T (cons '+ (cons x rest)))))))
+        (combiner '+ xs (lambda (x) `(* ,x 2))))
       (T (cons (car xs) (map combine-terms (cdr xs)))))))
+
 
 ;; simplify expression
 (define simplify
