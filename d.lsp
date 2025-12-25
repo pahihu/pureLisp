@@ -58,11 +58,20 @@
             ; Quotient: treat denominator as product of tail
             ((eq op (quote /))
               (cond
-                ((atom args) 0)                             ; (/ ) degenerate
+                ((atom args) 0) ; (/ ) degenerate
                 ((atom (cdr args)) (dquot (car args) NIL var))
                 (T (dquot (car args) (cdr args) var))))
 
-            ; Default: unknown operator › 0 (treat as constant form)
+            ; extend (d ...)
+            ; d(expt u n, var) = (* n (expt u (- n 1)) (d u var))
+            ((eq op (quote expt))
+              (let ((u (car args))
+                    (n (car (cdr args))))
+                (cond
+                  ((atom n) `(* ,n (expt ,u ,(- n 1)) ,(d u var)))
+                  (T 0)))) ; only integer exponents supported
+
+            ; Default: unknown operator -> 0 (treat as constant form)
             (T 0)))))))
 
 
@@ -85,19 +94,38 @@
                 (T (cons head tail))))
             (T (cons head tail))))))))
 
-; combine like terms in sums
-(define combine-sum
+; combine like terms
+(define combine-terms
   (lambda (xs)
     (cond
       ((atom xs) xs)
-      (T
-        (let ((x (car xs))
-              (rest (combine-sum (cdr xs))))
-          (cond
-            ((atom rest) (cons x rest))
-            ((equal x (car rest))
-              (cons (cons '* (list 2 x)) (cdr rest)))
-            (T (cons x rest))))))))
+      ((eq (car xs) (quote *))
+        (let ((args (cdr xs)))
+          (let ((x (combine-terms (car args)))
+                (rest (map combine-terms (cdr args))))
+            (cond
+              ((atom rest) (cons '* (cons x rest)))
+              ((equal x (car rest))
+                `(* (expt ,x 2) ,@(cdr rest)))
+              ((and (not (atom x)) (eq (car x) (quote *)))
+                `(* ,@(cdr x) ,@rest))
+              ((and (not (atom (car rest))) (eq (car (car rest)) (quote *)))
+                `(* ,x ,@(cdr (car rest)) ,@(cdr rest)))
+              (T (cons '* (cons x rest)))))))
+      ((eq (car xs) (quote +))
+        (let ((args (cdr xs)))
+          (let ((x (combine-terms (car args)))
+                (rest (map combine-terms (cdr args))))
+            (cond
+              ((atom rest) (cons '+ (cons x rest)))
+              ((equal x (car rest))
+                `(+ (* ,x 2) ,@(cdr rest)))
+              ((and (not (atom x)) (eq (car x) (quote +)))
+                `(+ ,@(cdr x) ,@rest))
+              ((and (not (atom (car rest))) (eq (car (car rest)) (quote +)))
+                `(+ ,x ,@(cdr (car rest)) ,@(cdr rest)))
+              (T (cons '+ (cons x rest)))))))
+      (T (cons (car xs) (map combine-terms (cdr xs)))))))
 
 ;; simplify expression
 (define simplify
@@ -140,5 +168,30 @@
                 ((eq (car (cdr args)) 1) (car args))
                 (T (cons (quote /) args))))
 
+            ; expt simplification
+            ((eq op (quote expt))
+              (cond
+                ((eq (car (cdr args)) 0) 1)
+                ((eq (car (cdr args)) 1) (car args))
+                (T (cons (quote expt) args))))
+
             ; default: reconstruct
             (T (cons op args))))))))
+
+; apply f(x[n]) = x[n+1], until x[n] = x[n+1]
+(define stable
+  (lambda (f x)
+    (let ((x1 (f x)))
+      (cond
+        ((equal x1 x) x)
+        (T (stable f x1))))))
+
+; return f(g(x))
+(define compose
+  (lambda (f g)
+    (lambda (x)
+      (f (g x)))))
+
+(define full-simplify
+  (lambda (x)
+    (stable (compose combine-terms simplify) x)))

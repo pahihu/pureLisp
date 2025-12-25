@@ -1,4 +1,7 @@
 ;; Define expressions
+(load stdlib.lsp)
+(load d.lsp)
+
 (define x x)
 (define y y)
 
@@ -20,11 +23,11 @@
 (d '(/ (* x x) y) x)
 
 ; Derivative before simplification
-(d (* x x x) x)
+(d '(* x x x) x)
 ; => (+ (* 1 (* x x)) (* x (* 1 x)) (* x (* x 1)))
 
 ; After simplification
-(simplify (d (* x x x) x))
+(simplify (d '(* x x x) x))
 ; => (* 3 (* x x))
 
 ; Another example
@@ -36,3 +39,21 @@
 
 (simplify '(/ x 1))
 ; => x
+
+(d '(expt x 3) x)
+; => (* 3 (expt x 2) 1)
+
+(simplify (d '(expt x 3) x))
+; => (* 3 (expt x 2))
+
+(d '(expt (* x y) 2) x)
+; => (* 2 (expt (* x y) 1) (d (* x y) x))
+; => (* 2 (* x y) y)
+
+
+(define dx3 (d '(* x x x) x))
+(define sdx3 (simplify dx3))
+
+(define t1
+  (lambda ()
+    (full-simplify dx3)))

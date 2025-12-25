@@ -87,5 +87,6 @@
     (cond
       ((and (atom x) (atom y)) (eq x y))
       ((and (not (atom x)) (not (atom y)))
-        (and (eq (car x) (car y)) (equal (cdr x) (cdr y))))
+        (and (equal (car x) (car y))
+             (equal (cdr x) (cdr y))))
       (T NIL))))
