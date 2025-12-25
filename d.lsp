@@ -88,6 +88,12 @@
                 ((atom args) 0)
                 (T `(* -1 (sin ,@args) ,@(map (lambda (e) (d e var)) args)))))
 
+            ; d(tan u, var) = (/ 1 (expt (cos u) 2)) (d u var))
+            ((eq op (quote tan))
+              (cond
+                ((atom args) 0)
+                (T `(* (/ 1 (expt (cos ,@args) 2)) ,@(map (lambda (e) (d e var)) args)))))
+
             ; Default: unknown operator -> 0 (treat as constant form)
             (T 0)))))))
 
