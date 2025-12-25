@@ -43,12 +43,17 @@
 ; V op x
 (define vopx
   (lambda (op x y)
-    (map (lambda (x) (op x y)) x)))
+    (cond
+      ((atom x) NIL)
+      (T (cons (op (car x) y)
+               (vopx op (cdr x) y))))))
 
-; V1 op V2
 (define vopv
   (lambda (op x y)
-    (map (lambda (x) (op (car x) (car (cdr x)))) (pair x y))))
+    (cond
+      ((and (atom x) (atom y)) NIL)
+      (T (cons (op (car x) (car y))
+               (vopv op (cdr x) (cdr y)))))))
 
 ; V op
 (define vop
