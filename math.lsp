@@ -6,6 +6,16 @@
 
 (define log10 (lambda (x) (/ (log x) (log 10))))
 
+(define sqrt (lambda (x) (expt x 0.5)))
+
+(define Pi (/ 355 113))
+
+(define E (/ 49171 18089))
+
+(define rad (lambda (x) (/ (* Pi x) 180)))
+
+(define deg (lambda (x) (/ (* 180 x) Pi)))
+
 ; continued fraction, (cfract 1 n)
 (define cfract
   (lambda (x y)
