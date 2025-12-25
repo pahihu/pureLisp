@@ -6,7 +6,8 @@ It has:
 - quote atom eq cons car cdr cond
 - lambda label define
 - small library: not and or list null append map length reverse fold
-- float arithmetic: + - * / // %
+- integer/float arithmetic: + - * / // % expt log number? float? int float < <= >= >
+- file load
 - macros: defmacro quasiquote unquote unquote-splicing
 - reader macros: ' ` ,@ , 
 
