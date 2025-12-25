@@ -62,7 +62,6 @@
                 ((atom (cdr args)) (dquot (car args) NIL var))
                 (T (dquot (car args) (cdr args) var))))
 
-            ; extend (d ...)
             ; d(expt u n, var) = (* n (expt u (- n 1)) (d u var))
             ((eq op (quote expt))
               (let ((u (car args))
@@ -70,6 +69,24 @@
                 (cond
                   ((atom n) `(* ,n (expt ,u ,(- n 1)) ,(d u var)))
                   (T 0)))) ; only integer exponents supported
+
+            ; d(log u, var) = (* (/ 1 u) (d u var))
+            ((eq op (quote log))
+              (cond
+                ((atom args) 0)
+                (T `(* (/ 1 ,@args) ,@(map (lambda (e) (d e var)) args)))))
+
+            ; d(sin u, var) = (* (cos u) (d u var))
+            ((eq op (quote sin))
+              (cond
+                ((atom args) 0)
+                (T `(* (cos ,@args) ,@(map (lambda (e) (d e var)) args)))))
+
+            ; d(cos u, var) = (* -1 (sin u) (d u var))
+            ((eq op (quote cos))
+              (cond
+                ((atom args) 0)
+                (T `(* -1 (sin ,@args) ,@(map (lambda (e) (d e var)) args)))))
 
             ; Default: unknown operator -> 0 (treat as constant form)
             (T 0)))))))
