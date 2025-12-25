@@ -342,6 +342,15 @@ def apply_primitive(name, args, env):
         base, exp = args
         return base ** exp
 
+    if name == "sin":
+        return math.sin(args[0])
+
+    if name == "cos":
+        return math.cos(args[0])
+
+    if name == "tan":
+        return math.tan(args[0])
+
     if name == "<":
         return SYM_T if args[0] < args[1] else NIL
     
