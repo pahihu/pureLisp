@@ -219,6 +219,14 @@ def lisp_eval(expr, env):
                 return lisp_eval(expr2, env)
         return NIL
 
+    # let (special form)
+    if op == "let":
+        bindings, body = args
+        params = [b[0] for b in bindings]
+        values = [lisp_eval(b[1], env) for b in bindings]
+        lam = ("LAMBDA", params, body, env)
+        return lisp_apply(lam, values, env)
+
     # Regular application: (f arg1 arg2 ...)
     fn_val = lisp_eval(op, env)
     

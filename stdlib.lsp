@@ -55,9 +55,8 @@
   (lambda (x y)
     (cond
       ((and (atom x) (atom y)) NIL)
-      ((and (not (atom x)) (not (atom y)))
-        (cons (list (car x) (car y))
-              (pair (cdr x) (cdr y)))))))
+      (T (cons (list (car x) (car y))
+               (pair (cdr x) (cdr y)))))))
 
 ;; (assoc k L)
 (define assoc
@@ -66,3 +65,27 @@
       ((atom y) NIL)
       ((eq (car (car y)) x) (car (cdr (car y))))
       (T (assoc x (cdr y))))))
+
+;; (member x L)
+(define member
+  (lambda (x y)
+    (cond
+      ((atom y) NIL)
+      ((eq x (car y)) T)
+      (T (member x (cdr y))))))
+
+;; (remove x L)
+(define remove
+  (lambda (x y)
+    (cond
+      ((atom y) NIL)
+      ((eq x (car y)) (remove x (cdr y)))
+      (T (cons (car y) (remove x (cdr y)))))))
+
+(define equal
+  (lambda (x y)
+    (cond
+      ((and (atom x) (atom y)) (eq x y))
+      ((and (not (atom x)) (not (atom y)))
+        (and (eq (car x) (car y)) (equal (cdr x) (cdr y))))
+      (T NIL))))
