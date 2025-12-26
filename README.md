@@ -1,5 +1,5 @@
 # pureLisp
-Pure LISP from Copilot.
+Norvig-style tail-recursive pure LISP from Copilot.
 Well, this is just a toy. Fixes from me.
 
 It has:
