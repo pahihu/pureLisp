@@ -90,3 +90,13 @@
         (and (equal (car x) (car y))
              (equal (cdr x) (cdr y))))
       (T NIL))))
+
+(defmacro elapsed
+  (lambda (expr)
+    (let ((t0 't0)
+          (t1 't1)
+          (res 'res))
+      `(let ((,t0 (time-ms)))
+         (let ((,res ,expr))
+           (let ((,t1 (time-ms)))
+             (list (- ,t1 ,t0) ,res)))))))

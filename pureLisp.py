@@ -6,11 +6,17 @@ def debug(*args,**kwargs):
     if False:
         print(*args,**kwargs)
 
-import math
 import re
+import math
+import time
 
 NIL = []
 SYM_T = "T"
+
+XTAB = str.maketrans("[]","()")
+
+def lisp_to_string(val):
+  return str(val).translate(XTAB).replace(',','').replace("'",'')
 
 
 # --------------------------------------------
@@ -254,7 +260,7 @@ def lisp_apply(fn, arg_vals, env):
             case "MACRO": # Macro application
                 _, params, body, closure_env = fn
                 # Macro receives *raw* (unevaluated) argument expressions
-                new_env = env_extend(params, [arg_vals], closure_env)
+                new_env = env_extend(params, arg_vals, closure_env)
                 expanded = lisp_eval(body, new_env)
                 debug(f'expanded={expanded}')
                 # Now evaluate the expanded code in the *current* environment
@@ -391,6 +397,14 @@ def apply_primitive(name, args, env):
             raise TypeError("load expects a filename string")
         lisp_load(fname, env)
         return fname
+
+    if name == "time-ms":
+        return int(time.time() * 1000)
+
+    if name == "print":
+        val = args
+        print(lisp_to_string(val))
+        return val
 
     raise NameError(f"Unknown primitive: {name}")
 
