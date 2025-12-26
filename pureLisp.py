@@ -20,6 +20,19 @@ def lisp_to_string(val):
 
 
 # --------------------------------------------
+# thunk, trampoline runner
+# --------------------------------------------
+class Thunk:
+  def __init__(self, fn):
+    self.fn = fn
+
+def trampoline(x):
+  while isinstance(x, Thunk):
+    x = x.fn()
+  return x
+
+
+# --------------------------------------------
 # Reader
 # --------------------------------------------
 
@@ -94,7 +107,7 @@ def lisp_load(filename, env):
     tokens = tokenize(src)
     while tokens:
         expr = read_from_tokens(tokens)
-        lisp_eval(expr, env)
+        trampoline(lisp_eval(expr, env))
 
 
 # --------------------------------------------
@@ -184,7 +197,7 @@ def lisp_eval(expr, env):
     # quasiquote
     if op == "quasiquote":
         expanded = qq_expand(args[0])
-        return lisp_eval(expanded, env)
+        return Thunk(lambda: lisp_eval(expanded, env))
         
     # lambda
     if op == "lambda":
@@ -194,14 +207,14 @@ def lisp_eval(expr, env):
     # label (for recursion)
     if op == "label":
         name, lam = args
-        fn = lisp_eval(lam, env)
+        fn = trampoline(lisp_eval(lam, env))
         return ("LABEL", name, fn)
 
     # defmacro
     if op == "defmacro":
         name, lambda_expr = args
         # lambda_expr is (lambda (params) body)
-        lam = lisp_eval(lambda_expr, env)
+        lam = trampoline(lisp_eval(lambda_expr, env))
         # Convert lambda closure into a macro object
         if lam[0] != "LAMBDA":
             raise SyntaxError("defmacro requires a lambda")
@@ -213,7 +226,7 @@ def lisp_eval(expr, env):
     # define (syntactic sugar)
     if op == "define":
         name, value_expr = args
-        value = lisp_eval(value_expr, env)
+        value = trampoline(lisp_eval(value_expr, env))
         env.insert(0, (name, value))
         return name
 
@@ -221,29 +234,29 @@ def lisp_eval(expr, env):
     if op == "cond":
         for clause in args:
             test, expr2 = clause
-            if lisp_eval(test, env) != NIL:
-                return lisp_eval(expr2, env)
+            if trampoline(lisp_eval(test, env)) != NIL:
+                return Thunk(lambda: lisp_eval(expr2, env))
         return NIL
 
     # let (special form)
     if op == "let":
         bindings, body = args
         params = [b[0] for b in bindings]
-        values = [lisp_eval(b[1], env) for b in bindings]
+        values = [trampoline(lisp_eval(b[1], env)) for b in bindings]
         lam = ("LAMBDA", params, body, env)
-        return lisp_apply(lam, values, env)
+        return Thunk(lambda: lisp_apply(lam, values, env))
 
     # Regular application: (f arg1 arg2 ...)
-    fn_val = lisp_eval(op, env)
+    fn_val = trampoline(lisp_eval(op, env))
     
     # For macros, pass raw args; for functions, pass evaluated args
     if isinstance(fn_val, tuple) and fn_val[0] == "MACRO":
         # raw unevaluated arguments
-        return lisp_apply(fn_val, args, env)
+        return Thunk(lambda: lisp_apply(fn_val, args, env))
     else:
         # normal function application
-        arg_vals = [lisp_eval(a, env) for a in args]
-        return lisp_apply(fn_val, arg_vals, env)
+        arg_vals = [trampoline(lisp_eval(a, env)) for a in args]
+        return Thunk(lambda: lisp_apply(fn_val, arg_vals, env))
 
 
 # --------------------------------------------
@@ -261,18 +274,18 @@ def lisp_apply(fn, arg_vals, env):
                 _, params, body, closure_env = fn
                 # Macro receives *raw* (unevaluated) argument expressions
                 new_env = env_extend(params, arg_vals, closure_env)
-                expanded = lisp_eval(body, new_env)
+                expanded = trampoline(lisp_eval(body, new_env))
                 debug(f'expanded={expanded}')
                 # Now evaluate the expanded code in the *current* environment
-                return lisp_eval(expanded, env)
+                return Thunk(lambda: lisp_eval(expanded, env))
             case "LAMBDA":
                 _, params, body, closure_env = fn
                 new_env = env_extend(params, arg_vals, closure_env)
-                return lisp_eval(body, new_env)
+                return Thunk(lambda: lisp_eval(body, new_env))
             case "LABEL":
                 _, name, inner_fn = fn
                 labeled_env = [(name, fn)] + env
-                return lisp_apply(inner_fn, arg_vals, labeled_env)
+                return Thunk(lambda: lisp_apply(inner_fn, arg_vals, labeled_env))
             case _:
                 raise TypeError(f"Unknown special form: {fn}")
 
@@ -422,7 +435,7 @@ def repl():
             if not src:
                 continue
             expr = read(src)
-            result = lisp_eval(expr, env)
+            result = trampoline(Thunk(lambda: lisp_eval(expr, env)))
             print("?", result)
         except KeyboardInterrupt:
             print("\nGoodbye.")
