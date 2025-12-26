@@ -176,7 +176,7 @@ def is_eq(x, y):
 # --------------------------------------------
 
 def lisp_eval(expr, env):
-    debug(f'eval: {expr}')
+    # debug(f'eval: {expr}')
     if is_atom(expr):
         if isinstance(expr, str):
             ret, found = env_lookup(expr, env)
@@ -264,7 +264,7 @@ def lisp_eval(expr, env):
 # --------------------------------------------
 
 def lisp_apply(fn, arg_vals, env):
-    debug(f'apply: fn={fn} arg_vals={arg_vals}')
+    # debug(f'apply: fn={fn} arg_vals={arg_vals}')
     if isinstance(fn, str):
         return apply_primitive(fn, arg_vals, env)
 
@@ -275,7 +275,7 @@ def lisp_apply(fn, arg_vals, env):
                 # Macro receives *raw* (unevaluated) argument expressions
                 new_env = env_extend(params, arg_vals, closure_env)
                 expanded = trampoline(lisp_eval(body, new_env))
-                debug(f'expanded={expanded}')
+                # debug(f'expanded={expanded}')
                 # Now evaluate the expanded code in the *current* environment
                 return Thunk(lambda: lisp_eval(expanded, env))
             case "LAMBDA":
