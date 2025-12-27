@@ -117,7 +117,70 @@
                 (T (cons head tail))))
             (T (cons head tail))))))))
 
+; (collect-terms x rest 1 NIL)
+; (collect-terms x '(x y x x y) 1 NIL)
+; =>
+; ['x', 4, ['y', 'y']]
+(define collect-terms
+  (lambda (x rest n collected)
+    (cond
+      ((atom rest) (cons x (list n collected)))
+      ((eq x (car rest))
+        (collect-terms x
+                       (cdr rest)
+                       (+ n 1)
+                       collected))
+      (T (collect-terms x
+                        (cdr rest)
+                        n
+                        (cons (car rest) collected))))))
+
+
+; (flatten-terms op terms NIL NIL)
+; (flatten-terms '+ '((+ x y) (* x y) (+ x x)) NIL NIL)
+; =>
+; ['x', 'x', 'x', 'y', ['*', 'x', 'y']]
+(define flatten-terms
+  (lambda (op terms flat-terms other-terms)
+    (cond
+      ((atom terms) (append flat-terms other-terms))
+      ((eq op (car (car terms)))
+        (flatten-terms op
+                       (cdr terms)
+                       (append (cdr (car terms)) flat-terms)
+                       other-terms))
+      (T (flatten-terms op
+                        (cdr terms)
+                        flat-terms
+                        (cons (car terms) other-terms))))))
+
+; (+ ... (+ ...)) => (+ ... ...)
+(define flatten
+  (lambda (xs)
+    (cond
+      ((atom xs) xs)
+      (T (cons (car xs) (flatten-terms (car xs) (cdr xs) NIL NIL))))))
+
+
 ; combiner
+(define combiner.ga
+  (lambda (op xs f)
+    (let ((args (cdr xs)))
+      (let ((x (combine-terms (car args)))
+            (rest (map combine-terms (cdr args))))
+        (cond
+          ((atom rest) (cons op (cons x rest)))
+          ; (op a a...)
+          ((eq x (car rest))
+            `(,op ,(f x) ,@(cdr rest)))
+          ; (op a (op...) ...)
+          ((and (not (atom (car rest))) (eq (car (car rest)) op))
+            `(,op ,x ,@(cdr (car rest)) ,@(cdr rest)))
+          ; (op (op...) ...)
+          ((and (not (atom x)) (eq (car x) op))
+            `(,op ,@(cdr x) ,@rest))
+          (T (cons op (cons x rest))))))))
+
 (define combiner
   (lambda (op xs f)
     (let ((args (cdr xs)))
@@ -126,25 +189,59 @@
         (cond
           ((atom rest) (cons op (cons x rest)))
           ; (op a a...)
-          ((equal x (car rest))
-            `(,op ,(f x) ,@(cdr rest)))
-          ; (op (op...) ...)
-          ((and (not (atom x)) (eq (car x) op))
-            `(,op ,@(cdr x) ,@rest))
-          ; (op a (op...) ...))
-          ((and (not (atom (car rest))) (eq (car (car rest)) op))
-            `(,op ,x ,@(cdr (car rest)) ,@(cdr rest)))
-          (T (cons op (cons x rest))))))))
+          ((> (count x rest) 0)
+            (let ((ret (collect-terms x rest 1 NIL)))
+              (let ((n (car (cdr ret)))
+                    (collected (car (cdr (cdr ret)))))
+                (cond
+                  ((atom collected) (f x n))
+                  (T `(,op ,(f x n) ,@collected))))))
+          ; (op ... (op...) ...)
+          (T (flatten (cons op (cons x rest)))))))))
 
 (define combine-terms
   (lambda (xs)
     (cond
       ((atom xs) xs)
       ((eq (car xs) (quote *))
-        (combiner '* xs (lambda (x) `(expt ,x 2))))
+        (combiner '* xs (lambda (x n) `(expt ,x ,n))))
       ((eq (car xs) (quote +))
-        (combiner '+ xs (lambda (x) `(* ,x 2))))
+        (combiner '+ xs (lambda (x n) `(* ,x ,n))))
       (T (cons (car xs) (map combine-terms (cdr xs)))))))
+
+(define int?
+  (lambda (x)
+    (and (number? x) (not (float? x)))))
+
+(define expand-times
+  (lambda (lst i n expr)
+    (cond
+      ((< i n) (expand-times (cons expr lst) (+ i 1) n expr))
+      (T lst))))
+
+(define expander
+  (lambda (x y)
+    (cond
+      ((int? x) (expand-times '(+) 0 x y))
+      ((int? y) (expand-times '(+) 0 y x))
+      (T (cons y (list x '*))))))
+
+(define expand-mul*
+  (lambda (xs)
+    (let ((op (car xs))
+          (rest (cdr xs)))
+      (cond
+        ((and (eq op (quote *)) (eq 2 (length rest)))
+          (reverse (expander (car rest) (car (cdr rest)))))
+        (T xs)))))
+
+; (* expr N) => (+ expr...)
+(define expand-mul
+  (lambda (xs)
+    (cond
+      ((atom xs) NIL)
+      ((eq (car xs) (quote *)) (expand-mul* xs))
+      (T (cons (car xs) (map expand-mul* (cdr xs)))))))
 
 
 ;; simplify expression
@@ -198,13 +295,17 @@
             ; default: reconstruct
             (T (cons op args))))))))
 
-; apply f(x[n]) = x[n+1], until x[n] = x[n+1]
+; apply f(x[n]) = x[n+1], until x[n+1] in prev. x[]
+(define stable*
+  (lambda (f X)
+    (let ((x1 (f (car X))))
+      (cond
+        ((member x1 X) (car X))
+        (T (stable* f (cons x1 X)))))))
+
 (define stable
   (lambda (f x)
-    (let ((x1 (f x)))
-      (cond
-        ((equal x1 x) x)
-        (T (stable f x1))))))
+    (stable* f (cons x NIL))))
 
 ; return f(g(x))
 (define compose

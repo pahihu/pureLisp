@@ -74,6 +74,16 @@
       ((eq x (car y)) T)
       (T (member x (cdr y))))))
 
+; (count x L)
+(define count
+  (lambda (x y)
+    (let ((cnt (lambda (cnt x y n)
+                (cond
+                  ((atom y) n)
+                  ((eq (car y) x) (cnt cnt x (cdr y) (+ n 1)))
+                  (T (cnt cnt x (cdr y) n))))))
+      (cnt cnt x y 0))))
+
 ;; (remove x L)
 (define remove
   (lambda (x y)
@@ -100,3 +110,15 @@
          (let ((,res ,expr))
            (let ((,t1 (time-ms)))
              (list (- ,t1 ,t0) ,res)))))))
+
+(defmacro times
+  (lambda (n expr)
+    (let ((loop 'loop)
+          (i 'i)
+          (s 's))
+      `(let ((,loop
+              (lambda (,loop ,i ,s)
+                (cond
+                  ((< ,i ,n) (,loop ,loop (+ ,i 1) ,expr))
+                  (T ,s)))))
+        (,loop ,loop 0 NIL)))))

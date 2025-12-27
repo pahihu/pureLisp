@@ -53,7 +53,6 @@
 
 (define dx3 (d '(* x x x) x))
 (define sdx3 (simplify dx3))
-
-(define t1
-  (lambda ()
-    (full-simplify dx3)))
+(define fsdx3 (full-simplify sdx3))
+(print 'fsdx3 fsdx3)
+(print (combine-terms (flatten (expand-mul fsdx3))))
