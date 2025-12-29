@@ -8,6 +8,8 @@
 
 (define list (lambda (a b) (cons a (cons b NIL))))
 
+(define number? (lambda (x) (or (int? x) (float? x))))
+
 (define null (lambda (x) (eq x NIL)))
 
 ;; (append L1 L2)

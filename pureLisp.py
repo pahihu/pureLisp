@@ -385,8 +385,8 @@ def apply_primitive(name, args, env):
     if name == "float?":
         return SYM_T if isinstance(args[0], float) else NIL
 
-    if name == "number?":
-        return SYM_T if isinstance(args[0], int) or isinstance(args[0], float) else NIL
+    if name == "int?":
+        return SYM_T if isinstance(args[0], int) else NIL
 
     if name == "int":
         x = args[0]
